@@ -4,7 +4,7 @@ const ErrorHander = require("../utils/errorHandler.util");
 
 exports.getProfile = async (req, res, next) => {
   try {
-    const user = await User.findByPk(req.user.id);
+    const user = await User.findByPk(req.user.id,  {attributes: { exclude: ['password'] }});
 
     return res.json({
       success: true,
@@ -17,7 +17,7 @@ exports.getProfile = async (req, res, next) => {
 
 exports.updateProfile = async (req, res, next) => {
   try {
-    const user = await User.findByPk(req.user.id);
+    const user = await User.findByPk(req.user.id, {attributes: { exclude: ['password'] }});
 
     if (!user) return next(new ErrorHander("User not found", 404));
 

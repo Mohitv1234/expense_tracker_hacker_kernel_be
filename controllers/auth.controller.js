@@ -26,7 +26,6 @@ exports.login = async (req, res, next) => {
     const { email, password } = req.body;
     const user = await User.findOne({ where: { email }});
     const validPassword = await bcrypt.compare(password, user.password);
-    console.log(validPassword, user);
     
     if (!validPassword || !user) return next(new ErrorHander("Invalid credentials", 400));
 
