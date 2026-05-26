@@ -2,7 +2,7 @@ const express = require('express')
 const app = express()
 const cors = require('cors');
 require('dotenv').config();
-const sequelize = require("./config/database");
+const sequelize = require("./config/database.config");
 
 // Routes Import
 const authRoutes = require('./routes/auth.route')
@@ -16,7 +16,10 @@ const reportRoutes = require('./routes/report.route')
 const tagRoutes = require('./routes/tag.route')
 const transacctionRoutes = require('./routes/transacction.route')
 const userRoutes = require('./routes/user.route')
-const transactionTypeRoutes = require('./routes/transactionType.route')
+const transactionTypeRoutes = require('./routes/transactionType.route');
+
+const errorhandleMiddleware = require('./middleware/errorhandle.middleware');
+const notfoundMiddleware = require('./middleware/notfound.middleware');
 
 
 sequelize.sync()
@@ -44,6 +47,9 @@ app.use('/api/tag', tagRoutes);
 app.use('/api/transaction', transacctionRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/transaction-type', transactionTypeRoutes);
+
+app.use(errorhandleMiddleware);
+app.use(notfoundMiddleware);
 
 const port = process.env.PORT
 app.listen(port, () => {

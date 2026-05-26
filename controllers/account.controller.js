@@ -1,309 +1,151 @@
-// controllers/account.controller.js
+const { Account, Transaction } = require("../models");
+const ErrorHander = require("../utils/errorHandler.util");
 
-const {
-  Account,
-  Transaction
-} = require('../models');
-
-
-// =====================================
-// CREATE ACCOUNT
-// =====================================
-
-exports.createAccount = async (
-  req,
-  res
-) => {
-
+exports.createAccount = async (req, res, next) => {
   try {
+    const { name, account_type, balance } = req.body;
 
-    const {
+    const account = await Account.create({
+      user_id: req.user.id,
       name,
       account_type,
-      balance
-    } = req.body;
-
-    const account =
-      await Account.create({
-
-        user_id: req.user.id,
-
-        name,
-
-        account_type,
-
-        balance: balance || 0
-
-      });
+      balance: balance || 0,
+    });
 
     return res.status(201).json({
       success: true,
-      message: 'Account created',
-      data: account
+      message: "Account created",
+      data: account,
     });
 
   } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+    return next(new ErrorHander(error.message, 500))
   }
-
 };
 
-
-// =====================================
-// GET ALL ACCOUNTS
-// =====================================
-
-exports.getAccounts = async (
-  req,
-  res
-) => {
-
+exports.getAccounts = async (req, res, next) => {
   try {
+    const accounts = await Account.findAll({
+      where: {
+        user_id: req.user.id,
+      },
 
-    const accounts =
-      await Account.findAll({
-
-        where: {
-          user_id: req.user.id
-        },
-
-        order: [
-          ['created_at', 'DESC']
-        ]
-
-      });
+      order: [["created_at", "DESC"]],
+    });
 
     return res.json({
       success: true,
-      data: accounts
+      data: accounts,
     });
-
   } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+      return next(new ErrorHander(error.message, 500))
   }
-
 };
 
-
-// =====================================
-// GET SINGLE ACCOUNT
-// =====================================
-
-exports.getAccountById = async (
-  req,
-  res
-) => {
-
+exports.getAccountById = async (req, res, next) => {
   try {
-
-    const account =
-      await Account.findOne({
-
-        where: {
-          id: req.params.id,
-          user_id: req.user.id
-        }
-
-      });
+    const account = await Account.findOne({
+      where: {
+        id: req.params.id,
+        user_id: req.user.id,
+      },
+    });
 
     if (!account) {
-
-      return res.status(404).json({
-        success: false,
-        message: 'Account not found'
-      });
-
+      return next(new ErrorHander("Account not found", 404));
     }
 
     return res.json({
       success: true,
-      data: account
+      data: account,
     });
-
   } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+    return next(new ErrorHander(error.message, 500));
   }
-
 };
 
-
-// =====================================
-// UPDATE ACCOUNT
-// =====================================
-
-exports.updateAccount = async (
-  req,
-  res
-) => {
-
+exports.updateAccount = async (req, res, next) => {
   try {
-
-    const account =
-      await Account.findOne({
-
-        where: {
-          id: req.params.id,
-          user_id: req.user.id
-        }
-
-      });
+    const account = await Account.findOne({
+      where: {
+        id: req.params.id,
+        user_id: req.user.id,
+      },
+    });
 
     if (!account) {
-
-      return res.status(404).json({
-        success: false,
-        message: 'Account not found'
-      });
-
+      return next(new ErrorHander("Account not found", 404));
     }
 
     await account.update(req.body);
 
     return res.json({
       success: true,
-      message: 'Account updated',
-      data: account
+      message: "Account updated",
+      data: account,
     });
-
   } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+    return next(new ErrorHander(error.message, 500))
   }
-
 };
 
-
-// =====================================
-// DELETE ACCOUNT
-// =====================================
-
-exports.deleteAccount = async (
-  req,
-  res
-) => {
-
+exports.deleteAccount = async (req, res, next) => {
   try {
-
-    const account =
-      await Account.findOne({
-
-        where: {
-          id: req.params.id,
-          user_id: req.user.id
-        }
-
-      });
+    const account = await Account.findOne({
+      where: {
+        id: req.params.id,
+        user_id: req.user.id,
+      },
+    });
 
     if (!account) {
-
-      return res.status(404).json({
-        success: false,
-        message: 'Account not found'
-      });
-
+      return next(new ErrorHander("Account not found", 404))
     }
 
     // CHECK TRANSACTIONS
 
-    const transactionCount =
-      await Transaction.count({
-
-        where: {
-          account_id: account.id
-        }
-
-      });
+    const transactionCount = await Transaction.count({
+      where: {
+        account_id: account.id,
+      },
+    });
 
     if (transactionCount > 0) {
-
       return res.status(400).json({
         success: false,
-        message:
-          'Cannot delete account with transactions'
+        message: "Cannot delete account with transactions",
       });
-
     }
 
     await account.destroy();
 
     return res.json({
       success: true,
-      message: 'Account deleted'
+      message: "Account deleted",
     });
-
   } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+    return next(new ErrorHander(error.message, 500))
   }
-
 };
 
-
-// =====================================
-// ACCOUNT BALANCE
-// =====================================
-
-exports.getAccountBalance = async (
-  req,
-  res
-) => {
-
+exports.getAccountBalance = async (req, res, next) => {
   try {
-
-    const account =
-      await Account.findOne({
-
-        where: {
-          id: req.params.id,
-          user_id: req.user.id
-        }
-
-      });
+    const account = await Account.findOne({
+      where: {
+        id: req.params.id,
+        user_id: req.user.id,
+      },
+    });
 
     if (!account) {
-
-      return res.status(404).json({
-        success: false,
-        message: 'Account not found'
-      });
-
+      return next(new ErrorHander("Account not found", 404));
     }
 
     return res.json({
       success: true,
-      balance: account.balance
+      balance: account.balance,
     });
-
   } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+    return next(new ErrorHander(error.message, 500))
   }
-
 };

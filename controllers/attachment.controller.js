@@ -1,107 +1,41 @@
-// controllers/attachment.controller.js
+const { Attachment, Transaction } = require("../models");
+const ErrorHander = require("../utils/errorHandler.util");
 
-const {
-  Attachment,
-  Transaction
-} = require('../models');
-
-
-// =====================================
-// UPLOAD ATTACHMENT
-// =====================================
-
-exports.uploadAttachment = async (
-  req,
-  res
-) => {
-
+exports.uploadAttachment = async (req, res, next) => {
   try {
-
-    const {
-      transaction_id
-    } = req.body;
-
-    const transaction =
-      await Transaction.findOne({
-
-        where: {
-          id: transaction_id,
-          user_id: req.user.id
-        }
-
-      });
+    const { transaction_id } = req.body;
+    const transaction = await Transaction.findOne({
+      where: { id: transaction_id, user_id: req.user.id },
+    });
 
     if (!transaction) {
-
-      return res.status(404).json({
-        success: false,
-        message: 'Transaction not found'
-      });
-
+      return next(new ErrorHander("Transaction not found", 404));
     }
 
-    const attachment =
-      await Attachment.create({
-
-        transaction_id,
-
-        file_url:
-          req.file.path,
-
-        file_type:
-          req.file.mimetype
-
-      });
+    const attachment = await Attachment.create({
+      transaction_id,
+      file_url: req.file.path,
+      file_type: req.file.mimetype,
+    });
 
     return res.status(201).json({
       success: true,
-      data: attachment
+      data: attachment,
     });
 
   } catch (error) {
-
-    return res.status(500).json({
-
-      success: false,
-
-      message: error.message
-
-    });
-
+      return next(new ErrorHander(error.message, 500));
   }
-
 };
 
-
-// =====================================
-// GET ATTACHMENTS
-// =====================================
-
-exports.getAttachments = async (
-  req,
-  res
-) => {
-
+exports.getAttachments = async (req, res, next) => {
   try {
-
-    const attachments =
-      await Attachment.findAll();
-
-    return res.json({
+    const attachments = await Attachment.findAll();
+    return res.status(200).json({
       success: true,
-      data: attachments
+      data: attachments,
     });
-
   } catch (error) {
-
-    return res.status(500).json({
-
-      success: false,
-
-      message: error.message
-
-    });
-
+      return next(new ErrorHander(error.message, 500));
   }
-
 };

@@ -1,183 +1,53 @@
-// controllers/auth.controller.js
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const { User } = require("../models");
+const ErrorHander = require("../utils/errorHandler.util");
 
-const { User } = require('../models');
-
-
-// =====================================
-// REGISTER
-// =====================================
-
-exports.register = async (
-  req,
-  res
-) => {
-
+exports.register = async (req, res, next) => {
   try {
+    const { name, email, password, phone } = req.body;
+    const existingUser = await User.findOne({ where: { email }});
 
-    const {
-      name,
-      email,
-      password,
-      phone
-    } = req.body;
+    if (existingUser) return next(new ErrorHander("Email already exists", 400));
 
-    const existingUser =
-      await User.findOne({
-        where: { email }
-      });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({ name, email, password: hashedPassword, phone });
 
-    if (existingUser) {
-
-      return res.status(400).json({
-        success: false,
-        message: 'Email already exists'
-      });
-
-    }
-
-    const hashedPassword =
-      await bcrypt.hash(password, 10);
-
-    const user =
-      await User.create({
-
-        name,
-
-        email,
-
-        password: hashedPassword,
-
-        phone
-
-      });
-
-    return res.status(201).json({
-      success: true,
-      message: 'Registration successful',
-      data: user
-    });
+    return res.status(201).json({ success: true, message: "Registration successful", data: user});
 
   } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+      return next(new ErrorHander(error.message, 500))
   }
-
 };
 
-
-// =====================================
-// LOGIN
-// =====================================
-
-exports.login = async (
-  req,
-  res
-) => {
-
+exports.login = async (req, res, next) => {
   try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ where: { email }});
+    const validPassword = await bcrypt.compare(password, user.password);
+    console.log(validPassword, user);
+    
+    if (!validPassword || !user) return next(new ErrorHander("Invalid credentials", 400));
 
-    const {
-      email,
-      password
-    } = req.body;
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "7d"});
 
-    const user =
-      await User.findOne({
-        where: { email }
-      });
+    return res.json({ success: true, token, user });
 
-    if (!user) {
+  } catch (error) {
+      return next(new ErrorHander(error.message, 500))
+  }
+};
 
-      return res.status(404).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-
-    }
-
-    const validPassword =
-      await bcrypt.compare(
-        password,
-        user.password
-      );
-
-    if (!validPassword) {
-
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-
-    }
-
-    const token = jwt.sign(
-
-      {
-        id: user.id,
-        email: user.email
-      },
-
-      process.env.JWT_SECRET,
-
-      {
-        expiresIn: '7d'
-      }
-
-    );
+exports.getMe = async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.user.id);
 
     return res.json({
       success: true,
-      token,
-      user
+      data: user,
     });
-
   } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+    return next(new ErrorHander(error.message, 500))
   }
-
-};
-
-
-// =====================================
-// GET PROFILE
-// =====================================
-
-exports.getMe = async (
-  req,
-  res
-) => {
-
-  try {
-
-    const user =
-      await User.findByPk(
-        req.user.id
-      );
-
-    return res.json({
-      success: true,
-      data: user
-    });
-
-  } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
-  }
-
 };

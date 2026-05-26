@@ -1,35 +1,14 @@
-const express = require('express')
-const { getTransactionTypes, createTransactionType, deleteTransactionType } = require('../controllers/trabsactionType.controller')
+const express = require("express");
+const {
+  getTransactionTypes,
+  createTransactionType,
+  deleteTransactionType,
+} = require("../controllers/trabsactionType.controller");
 
-const router = express.Router()
+const router = express.Router();
 
+router.get("/", getTransactionTypes);
+router.post("/", createTransactionType);
+router.delete("/:id", deleteTransactionType);
 
-
-// ======================================
-// GET ALL TRANSACTION TYPES
-// ======================================
-
-router.get(
-    '/',
-    getTransactionTypes
-)
-
-// ======================================
-// CREATE TRANSACTION TYPE
-// ======================================
-
-router.post(
-    '/',
-    createTransactionType
-)
-
-// ======================================
-// DELETE TRANSACTION TYPE
-// ======================================
-
-router.delete(
-    '/:id',
-    deleteTransactionType
-)
-
-module.exports = router
+module.exports = router;

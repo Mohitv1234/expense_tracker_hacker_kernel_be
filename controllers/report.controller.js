@@ -1,189 +1,92 @@
-// controllers/report.controller.js
-
 const {
   Transaction,
   Account,
   Category,
-  TransactionType
-} = require('../models');
+  TransactionType,
+} = require("../models");
 
-const { Op } = require('sequelize');
+const { Op } = require("sequelize");
+const ErrorHander = require("../utils/errorHandler.util");
 
-
-// =====================================
-// MONTHLY REPORT
-// =====================================
-
-exports.getMonthlyReport = async (
-  req,
-  res
-) => {
-
+exports.getMonthlyReport = async (req, res, next) => {
   try {
+    const { start_date, end_date } = req.query;
 
-    const {
-      start_date,
-      end_date
-    } = req.query;
+    const transactions = await Transaction.findAll({
+      where: {
+        user_id: req.user.id,
 
-    const transactions =
-      await Transaction.findAll({
-
-        where: {
-
-          user_id: req.user.id,
-
-          transaction_date: {
-            [Op.between]: [
-              new Date(start_date).setHours(0, 0, 0, 0),
-              new Date(end_date).setHours(23, 59, 59, 999)
-            ]
-          }
-
+        transaction_date: {
+          [Op.between]: [
+            new Date(start_date).setHours(0, 0, 0, 0),
+            new Date(end_date).setHours(23, 59, 59, 999),
+          ],
         },
-
-        include: [
-          Account,
-          Category,
-          TransactionType
-        ],
-
-        order: [
-          ['transaction_date', 'DESC']
-        ]
-
-      });
-
-    // TOTALS
+      },
+      include: [Account, Category, TransactionType],
+      order: [["transaction_date", "DESC"]],
+    });
 
     let totalIncome = 0;
     let totalExpense = 0;
-
-    transactions.forEach(item => {
-
-      if (
-        item.TransactionType.name
-        === 'income'
-      ) {
-
-        totalIncome +=
-          Number(item.amount);
-
+    transactions.forEach((item) => {
+      if (item.TransactionType.name === "Income") {
+        totalIncome += Number(item.amount);
+      } else if (item.TransactionType.name === "Expense") {
+        totalExpense += Number(item.amount);
       }
-
-      else if (
-        item.TransactionType.name
-        === 'expense'
-      ) {
-
-        totalExpense +=
-          Number(item.amount);
-
-      }
-
     });
 
     return res.json({
-
       success: true,
-
       data: {
-
         totalIncome,
-
         totalExpense,
-
-        balance:
-          totalIncome - totalExpense,
-
-        transactions
-
-      }
-
+        balance: totalIncome - totalExpense,
+        transactions,
+      },
     });
-
   } catch (error) {
-
-    return res.status(500).json({
-
-      success: false,
-
-      message: error.message
-
-    });
-
+    return next(new ErrorHander(error.message, 500));
   }
-
 };
 
-
-// =====================================
-// CATEGORY REPORT
-// =====================================
-
-exports.getCategoryReport = async (
-  req,
-  res
-) => {
-
+exports.getCategoryReport = async (req, res, next) => {
   try {
+    const { start_date, end_date } = req.query;
 
-    const {
-      start_date,
-      end_date
-    } = req.query;
-
-    const report =
-      await Transaction.findAll({
-
-        where: {
-          user_id: req.user.id,
-          transaction_type_id: 2,
-          transaction_date: {
-            [Op.between]: [
-              new Date(start_date).setHours(0, 0, 0, 0),
-              new Date(end_date).setHours(23, 59, 59, 999)
-            ]
-          }
+    const report = await Transaction.findAll({
+      where: {
+        user_id: req.user.id,
+        transaction_type_id: 2,
+        transaction_date: {
+          [Op.between]: [
+            new Date(start_date).setHours(0, 0, 0, 0),
+            new Date(end_date).setHours(23, 59, 59, 999),
+          ],
         },
+      },
 
-        include: [
-          Category
-        ]
-
-      });
+      include: [Category],
+    });
 
     const categoryTotals = {};
 
-    report.forEach(item => {
-
-      const categoryName =
-        item.Category?.name ||
-        'Unknown';
+    report.forEach((item) => {
+      const categoryName = item.Category?.name || "Unknown";
 
       if (!categoryTotals[categoryName]) {
-
         categoryTotals[categoryName] = 0;
-
       }
 
-      categoryTotals[categoryName] +=
-        Number(item.amount);
-
+      categoryTotals[categoryName] += Number(item.amount);
     });
 
     return res.json({
       success: true,
-      data: categoryTotals
+      data: categoryTotals,
     });
-
   } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+    return next(new ErCrorHander(error.message, 500));
   }
-
 };

@@ -1,156 +1,58 @@
-// controllers/user.controller.js
+const bcrypt = require("bcrypt");
+const { User } = require("../models");
+const ErrorHander = require("../utils/errorHandler.util");
 
-const bcrypt = require('bcrypt');
-
-const { User } = require('../models');
-
-
-// =====================================
-// GET PROFILE
-// =====================================
-
-exports.getProfile = async (
-  req,
-  res
-) => {
-
+exports.getProfile = async (req, res, next) => {
   try {
-
-    const user =
-      await User.findByPk(
-        req.user.id
-      );
+    const user = await User.findByPk(req.user.id);
 
     return res.json({
       success: true,
-      data: user
+      data: user,
     });
-
   } catch (error) {
-
-    return res.status(500).json({
-
-      success: false,
-
-      message: error.message
-
-    });
-
+    return next(new ErrorHander(error.message, 500));
   }
-
 };
 
-
-// =====================================
-// UPDATE PROFILE
-// =====================================
-
-exports.updateProfile = async (
-  req,
-  res
-) => {
-
+exports.updateProfile = async (req, res, next) => {
   try {
+    const user = await User.findByPk(req.user.id);
 
-    const user =
-      await User.findByPk(
-        req.user.id
-      );
-
-    if (!user) {
-
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-
-    }
+    if (!user) return next(new ErrorHander("User not found", 404));
 
     await user.update(req.body);
 
     return res.json({
       success: true,
-      message: 'Profile updated',
-      data: user
+      message: "Profile updated",
+      data: user,
     });
-
   } catch (error) {
-
-    return res.status(500).json({
-
-      success: false,
-
-      message: error.message
-
-    });
-
+    return next(new ErCrorHander(error.message, 500));
   }
-
 };
 
-
-// =====================================
-// CHANGE PASSWORD
-// =====================================
-
-exports.changePassword = async (
-  req,
-  res
-) => {
-
+exports.changePassword = async (req, res, next) => {
   try {
+    const { oldPassword, newPassword } = req.body;
+    const user = await User.findByPk(req.user.id);
+    const validPassword = await bcrypt.compare(oldPassword, user.password);
 
-    const {
-      oldPassword,
-      newPassword
-    } = req.body;
+    if (!validPassword)
+      return next(new ErrorHander("Old password incorrect", 400));
 
-    const user =
-      await User.findByPk(
-        req.user.id
-      );
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    const validPassword =
-      await bcrypt.compare(
-        oldPassword,
-        user.password
-      );
-
-    if (!validPassword) {
-
-      return res.status(400).json({
-        success: false,
-        message: 'Old password incorrect'
-      });
-
-    }
-
-    const hashedPassword =
-      await bcrypt.hash(
-        newPassword,
-        10
-      );
-
-    user.password =
-      hashedPassword;
+    user.password = hashedPassword;
 
     await user.save();
 
     return res.json({
       success: true,
-      message: 'Password changed'
+      message: "Password changed",
     });
-
   } catch (error) {
-
-    return res.status(500).json({
-
-      success: false,
-
-      message: error.message
-
-    });
-
+    return next(new ErrorHander(error.message, 500));
   }
-
 };

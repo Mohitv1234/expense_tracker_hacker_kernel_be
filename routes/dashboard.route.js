@@ -1,5 +1,3 @@
-// routes/dashboard.routes.js
-
 const router = require("express").Router();
 
 const dashboardController = require("../controllers/dashboard.controller");
