@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 
 const { User } = require("../models");
 const ErrorHander = require("../utils/errorHandler.util");
+const { createTransactionType } = require("./trabsactionType.controller");
 
 exports.register = async (req, res, next) => {
   try {
@@ -13,7 +14,6 @@ exports.register = async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, password: hashedPassword, phone });
-
     return res.status(201).json({ success: true, message: "Registration successful", data: user});
 
   } catch (error) {
@@ -32,6 +32,7 @@ exports.login = async (req, res, next) => {
     const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "7d"});
 
     return res.json({ success: true, token, user });
+    
 
   } catch (error) {
       return next(new ErrorHander(error.message, 500))

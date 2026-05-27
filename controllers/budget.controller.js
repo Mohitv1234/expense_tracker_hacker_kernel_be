@@ -85,6 +85,7 @@ exports.getBudgets = async (req, res, next) => {
       where: {
         user_id: req.user.id,
       },
+      include: [Category],
     });
 
     return res.json({

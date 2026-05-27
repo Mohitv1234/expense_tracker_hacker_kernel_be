@@ -55,11 +55,11 @@ exports.createTransaction = async (req, res, next) => {
 
     const typeName = transactionType.name;
 
-    if (typeName === "Income" || typeName === "Loan") {
+    if (typeName === "Income" || typeName === "Loan" && description == 'borrowed' || typeName === "Loan Repayment" && description == 'given') {
       account.balance = Number(account.balance) + Number(amount);
     }
 
-    else if (typeName === "Expense" || typeName === "Loan Repayment") {
+    else if (typeName === "Expense" || typeName === "Loan Repayment" && description == 'borrowed' || typeName === "Loan" && description == 'given') {
       if (Number(account.balance) < Number(amount)) {
         await t.rollback();
         return next(new ErrorHander("Insufficient balance", 400));
