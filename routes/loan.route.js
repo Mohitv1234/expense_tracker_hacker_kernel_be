@@ -8,5 +8,6 @@ router.get("/", authMiddleware, loanController.getLoans);
 router.get("/:id", authMiddleware, loanController.getLoanById);
 router.post("/payment", authMiddleware, loanController.payLoanInstallment);
 router.delete("/:id", authMiddleware, loanController.deleteLoan);
+router.get("/payment-reminder", loanController.sendRemider);
 
 module.exports = router;

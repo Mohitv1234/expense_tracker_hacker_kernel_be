@@ -221,3 +221,9 @@ exports.deleteLoan = async (req, res, next) => {
     return next(new ErrorHander(error.message, 500));
   }
 };
+
+exports.sendRemider = async (req, res, next) => {
+  if(global.io){
+    global.io.emit('users','hello')
+  }
+};

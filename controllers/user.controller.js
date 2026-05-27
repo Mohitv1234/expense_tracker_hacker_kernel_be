@@ -2,6 +2,19 @@ const bcrypt = require("bcrypt");
 const { User } = require("../models");
 const ErrorHander = require("../utils/errorHandler.util");
 
+exports.getAllUsers = async (req, res, next) => {
+  try {
+    const user = await User.findAll({attributes: { exclude: ['password'] }});
+
+    return res.json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    return next(new ErrorHander(error.message, 500));
+  }
+};
+
 exports.getProfile = async (req, res, next) => {
   try {
     const user = await User.findByPk(req.user.id,  {attributes: { exclude: ['password'] }});
