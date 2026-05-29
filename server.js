@@ -4,6 +4,7 @@ const cors = require('cors');
 require('dotenv').config();
 const sequelize = require("./config/database.config");
 const morgan = require('morgan');
+const { createClient } = require('redis');
 
 // Routes Import
 const authRoutes = require('./routes/auth.route')
@@ -22,7 +23,7 @@ const transactionTypeRoutes = require('./routes/transactionType.route');
 const errorhandleMiddleware = require('./middleware/errorhandle.middleware');
 const notfoundMiddleware = require('./middleware/notfound.middleware');
 const socketAuthMiddleware = require('./middleware/socketAuth.middleware');
-
+const client = require('./config/redis.config');
 
 sequelize.sync()
   .then(() => {
@@ -50,10 +51,11 @@ app.use('/api/transaction', transacctionRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/transaction-type', transactionTypeRoutes);
 app.use(morgan('dev'));
+
 app.use(errorhandleMiddleware);
 app.use(notfoundMiddleware);
+
 const server = require('http').createServer(app);
-const userSocketData = new Map();
 const io = require('socket.io')(server, {
   cors: {
     origin: "http://localhost:5173",
@@ -62,30 +64,42 @@ const io = require('socket.io')(server, {
 });
 
 global.io = io;
-global.userSocketData = userSocketData;
 io.use(socketAuthMiddleware);
 
 io.on('connection', (socket) => {
     console.log('user connected');
 
-      socket.on('register-user', ({ userId }) => {
-        if (!userId) return;
-        if (!userSocketData.has(userId)) {
-          userSocketData.set(userId, new Set());
-        }
-        userSocketData.get(userId).add(socket.id);
-        
-        socket.userId = userId;
-
-        console.log(
-          `📢 Registered User: ${userId} (${socket.id})`
-        );
+      socket.on('register-user', async () => {
+        if (!socket.data.user) return;
+          await client.set(`user:${socket.data.user.id}`, socket.id);
+          socket.userId = socket.data.user.id;
+          console.log(`📢 Registered User: ${socket.data.user.id} (${socket.id})`);
       });
 
-    socket.on('disconnect', function () {
+    socket.on('disconnect', async () => {
         console.log('user disconnected');
+        if (socket.userId) {
+            await client.del(`user:${socket.userId}`);
+            console.log(`🗑️ Removed User Registration from Redis: ${socket.userId}`);
+        }
     });
 })
 
-const port = process.env.PORT
-server.listen(port, () => console.log('Running with Socket.IO'));
+const port = process.env.PORT || 3000;
+async function startServer() {
+  try {
+    // Keep this here, it will safely connect the shared client!
+    await client.connect(); 
+    console.log("✅ Connected to Redis successfully.");
+
+    await sequelize.sync();
+    console.log("✅ Database tables synchronized.");
+
+    server.listen(port, () => console.log(`🚀 Server running on port ${port} with Socket.IO`));
+  } catch (error) {
+    console.error("❌ Failed to start the server applications:", error);
+    process.exit(1);
+  }
+}
+
+startServer();

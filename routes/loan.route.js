@@ -6,8 +6,8 @@ const authMiddleware = require("../middleware/auth.middleware");
 router.post("/", authMiddleware, loanController.createLoan);
 router.get("/", authMiddleware, loanController.getLoans);
 router.get("/:id", authMiddleware, loanController.getLoanById);
+router.post("/payment-reminder", authMiddleware, loanController.sendReminder);
 router.post("/payment", authMiddleware, loanController.payLoanInstallment);
 router.delete("/:id", authMiddleware, loanController.deleteLoan);
-router.get("/payment-reminder", loanController.sendRemider);
 
 module.exports = router;

@@ -12,6 +12,8 @@ const {
 } = require("../models");
 const { createTransaction } = require("./transaction.controller");
 const ErrorHander = require("../utils/errorHandler.util");
+const client = require("../config/redis.config");
+const nodemailer = require("nodemailer");
 
 exports.createLoan = async (req, res, next) => {
   try {
@@ -222,8 +224,76 @@ exports.deleteLoan = async (req, res, next) => {
   }
 };
 
-exports.sendRemider = async (req, res, next) => {
-  if(global.io){
-    global.io.emit('users','hello')
+exports.sendReminder = async (req, res, next) => {
+  try {
+    if (
+      !req.body.title ||
+      !req.body.content ||
+      (req.body.notificationMode == "application" && !req.body.userId) ||
+      (req.body.notificationMode == "phone" && !req.body.mobileNumber) ||
+      (req.body.notificationMode == "email" && !req.body.email)
+    ) {
+      return next(new ErrorHander("Please Fill All the Fields", 400));
+    }
+
+    if (req.body.notificationMode == "application") {
+      const redisKey = `user:${req.body.userId[0]}`;
+      const socketId = await client.get(redisKey);
+      if (socketId && global.io) {
+        global.io.to(socketId).emit("users", { data: req.body });
+        console.log(`⚡ Reminder emitted to socket ${socketId}`);
+      }
+    }
+
+    if (req.body.notificationMode == "email") {
+      // 1. Setup transporter with correct OAuth2 mapping
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          type: "OAuth2",
+          user: process.env.SENDER_EMAIL_ADDRESS, // MUST be your Gmail address (e.g., example@gmail.com)
+          clientId: process.env.Client_ID,
+          clientSecret: process.env.Client_Secret,
+          refreshToken: process.env.OAUTH_REFRESH_TOKEN,
+        },
+      });
+
+      await transporter.verify();
+      console.log("Transporter is configured correctly.");
+
+      // 2. Define subject and message from req.body to prevent undefined errors
+      const subject = req.body.title;
+      const message = req.body.content;
+
+      // 3. Fix Mail Options: Gmail overrides the 'from' header to your authenticated user email anyway.
+      const mailOptions = {
+        from: `"${req.user.name}" <${process.env.SENDER_EMAIL_ADDRESS}>`, 
+        to: process.env.EMAIL_RECIEVE,
+        replyTo: req.body.email, // Allows you to reply directly to the form submitter
+        subject: subject,
+        text: message,
+        html: `<div>
+                <h1>Name: ${req.user.name}</h1>
+                <p>Email: ${req.body.email}</p>
+                <p>Subject: ${req.body.title}</p>
+                <p>Message: ${req.body.content}</p>
+                <p><i>Message from Exesenergy Website</i></p>
+               </div>`,
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log("Email sent successfully.");
+
+      return res
+        .status(200)
+        .json({ status: "success", message: "Email sent successfully." });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Reminder sent successfully",
+    });
+  } catch (error) {
+    next(error);
   }
 };
